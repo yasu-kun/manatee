@@ -9,6 +9,8 @@ import cv2
 classes = ({0:'angry',1:'disgust',2:'fear',3:'happy',
         4:'sad',5:'surprise',6:'neutral'})
 
+classes_point = ({'angry':0, 'disgust':0, 'fear':0, 'happy':0, 'sad':0, 'surprise':0, 'neutral':0})
+
 face_cascade_file = './haarcascade_frontalface_default.xml'  
 front_face_detector = cv2.CascadeClassifier(face_cascade_file)  
 
@@ -45,46 +47,31 @@ while True:
         face_cut = cv2.resize(face_cut,(64, 64))
         face_cut = cv2.cvtColor(face_cut, cv2.COLOR_BGR2GRAY)
 
-        
-        #print(face_cut.shape)
-        
-        # b,g,r = cv2.split(face_cut)
-        # face_cut = cv2.merge([r,g,b])
-        # face_cut = face_cut[np.newaxis, :,:,:]
-
-        # #face_cut = Image.fromarray(face_cut)
-        # face_cut = Image.fromarray((face_cut[0] * 255).astype(np.uint8))
-        
-        #img = image.load_img(face_cut, grayscale=True , target_size=(64, 64))
-
         img_array = image.img_to_array(face_cut)
         pImg = np.expand_dims(img_array, axis=0) / 255
 
-        # model_path = './trained_models/fer2013_mini_XCEPTION.110-0.65.hdf5'
-
-        # emotions_XCEPTION = load_model(model_path, compile=False)
-
         prediction = emotions_XCEPTION.predict(pImg)[0]
 
-        #print(round(max(prediction)*100,2))
-        #print(prediction)
-        #convert the model into tf.js model
         save_path = '../nodejs/static/emotion_XCEPTION'
-        #tfjs.converters.save_keras_model(emotions_XCEPTION, save_path)
-        #print("[INFO] saved tf.js emotion model to disk..")
 
-        top_indices = prediction.argsort()[-5:][::-1]
-        #print(top_indices)
-        #result = [[classes[i], prediction[i]] for i in top_indices]
-
-        #result_t = [[classes[i], prediction[i]] for i in top_indices]
+        top_indices = prediction.argsort()[:][::-1]
 
         result = sorted([[classes[i], prediction[i]] for i in top_indices], reverse=True, key=lambda x: x[1])
-        print(result)
+        result_json = {classes[i]:prediction[i] for i in top_indices}
+        #print(result)
+        #print(result_json)
+
+        classes_point['angry'] = classes_point['angry'] + result_json['angry']
+        classes_point['disgust'] = classes_point['disgust'] + result_json['disgust']
+        classes_point['fear'] = classes_point['fear'] + result_json['fear']
+        classes_point['happy'] = classes_point['happy'] + result_json['happy']
+        classes_point['sad'] = classes_point['sad'] + result_json['sad']
+        classes_point['surprise'] = classes_point['surprise'] + result_json['surprise']
+        classes_point['neutral'] = classes_point['neutral'] + result_json['neutral']
+        
+        
         result_c = result[0][0]
         
-        
-
 
         '''
         result_p = [prediction[i] for i in top_indices]
@@ -96,11 +83,7 @@ while True:
         #for x in result:
         #    print(x)
         '''
-
-
         cv2.putText(img, str(result_c), (x+5,y-5), cv2.FONT_HERSHEY_PLAIN, 5, (255,255,255), 2)
-        
-        
         
     # FPS算出と表示用テキスト作成  
     fps = cv2.getTickFrequency() / (cv2.getTickCount() - tick)  
@@ -112,7 +95,8 @@ while True:
 
     # ESC  
     k = cv2.waitKey(10) & 0xff   
-    if k == 27:  
+    if k == 27:
+        print(classes_point)
         break  
  
 print("\n Exit Program")  
